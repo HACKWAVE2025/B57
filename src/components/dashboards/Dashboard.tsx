@@ -11,6 +11,8 @@ import {
   Users,
   TrendingUp,
   Calendar,
+  Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 
@@ -23,9 +25,11 @@ export const Dashboard: React.FC = () => {
     { icon: CheckSquare, label: "To-Do List", path: "/tasks", color: "bg-green-500" },
     { icon: StickyNote, label: "Short Notes", path: "/notes", color: "bg-yellow-500" },
     { icon: Calendar, label: "Calendar", path: "/calendar", color: "bg-red-500" },
+    { icon: Sparkles, label: "Journal", path: "/journal", color: "bg-cyan-500" },
     { icon: MessageSquare, label: "AI Assistant", path: "/chat", color: "bg-purple-500" },
     { icon: Brain, label: "Study Tools", path: "/tools", color: "bg-indigo-500" },
     { icon: BookOpen, label: "Flash Cards", path: "/flashcards", color: "bg-pink-500" },
+    { icon: MessageCircle, label: "Community", path: "/community", color: "bg-emerald-500" },
     { icon: Briefcase, label: "Interview Prep", path: "/interview", color: "bg-orange-500" },
     { icon: Users, label: "Team Space", path: "/team", color: "bg-teal-500" },
   ];
