@@ -2,29 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global font application */
 * {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-body {
-  margin: 0;
-  padding: 0;
+@layer base {
+  html {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    background-color: white;
+    color: #111827;
+  }
+
+  body {
+    overflow-x: hidden;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: white;
+    color: #111827;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Theme colors */
+:root {
+  --color-primary: 59 130 246;
+  --color-primary-hover: 37 99 235;
+  --color-primary-light: 147 197 253;
+  --color-primary-dark: 29 78 216;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+[data-theme="dark"] {
+  --color-primary: 96 165 250;
+  --color-primary-hover: 59 130 246;
+  --color-primary-light: 147 197 253;
+  --color-primary-dark: 37 99 235;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
