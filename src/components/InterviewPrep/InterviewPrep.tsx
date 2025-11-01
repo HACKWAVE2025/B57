@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-export default function InterviewPrep() {
-  return (
-    <div>
-      <h1>Interview Prep</h1>
-    </div>
-  );
-}
-
-=======
 import React from "react";
 import { Briefcase, AlertCircle, Rocket } from "lucide-react";
 
@@ -61,4 +51,4 @@ export const InterviewPrep: React.FC = () => {
     </div>
   );
 };
->>>>>>> 9bbd3282805925cfeba9b9fa7805e06679a691fc
+
