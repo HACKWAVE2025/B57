@@ -61,7 +61,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       const textarea = e.currentTarget;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const newCode = code.substring(0, start) + "  " + code.substring(end);
+      const newCode =
+        code.substring(0, start) + "  " + code.substring(end);
       onChange(newCode);
 
       // Set cursor position after the inserted spaces
@@ -76,37 +77,33 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const getSyntaxHighlighting = (text: string, lang: string): JSX.Element[] => {
     const lines = text.split("\n");
-
+    
     return lines.map((line, index) => {
       let highlightedLine = line;
       const elements: JSX.Element[] = [];
-
+      
       // Simple syntax highlighting based on language
       const patterns = getSyntaxPatterns(lang) || [];
-
+      
       let lastIndex = 0;
-      const matches: Array<{
-        index: number;
-        length: number;
-        className: string;
-      }> = [];
-
+      const matches: Array<{ index: number; length: number; className: string }> = [];
+      
       // Find all matches
       patterns.forEach(({ pattern, className }) => {
         let match;
-        const regex = new RegExp(pattern, "g");
+        const regex = new RegExp(pattern, 'g');
         while ((match = regex.exec(line)) !== null) {
           matches.push({
             index: match.index,
             length: match[0].length,
-            className,
+            className
           });
         }
       });
-
+      
       // Sort matches by index
       matches.sort((a, b) => a.index - b.index);
-
+      
       // Build highlighted line
       matches.forEach(({ index, length, className }) => {
         if (index > lastIndex) {
@@ -123,7 +120,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         );
         lastIndex = index + length;
       });
-
+      
       // Add remaining text
       if (lastIndex < line.length) {
         elements.push(
@@ -132,7 +129,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           </span>
         );
       }
-
+      
       // If no matches, return the whole line
       if (elements.length === 0) {
         elements.push(
@@ -141,7 +138,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           </span>
         );
       }
-
+      
       return (
         <div key={index} className="min-h-[1.5rem]">
           {elements}
@@ -152,85 +149,67 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const getSyntaxPatterns = (lang: string) => {
     const patterns: Array<{ pattern: string; className: string }> = [];
-
+    
     switch (lang) {
       case "javascript":
       case "typescript":
         patterns.push(
-          {
-            pattern:
-              "\\b(const|let|var|function|return|if|else|for|while|class|new|async|await|import|export|from|default)\\b",
-            className: "text-purple-400 font-semibold",
-          },
-          {
-            pattern: "\\b(true|false|null|undefined)\\b",
-            className: "text-orange-400",
-          },
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "'[^']*'", className: "text-green-400" },
-          { pattern: "`[^`]*`", className: "text-green-400" },
-          { pattern: "//.*$", className: "text-gray-500 italic" },
-          { pattern: "\\b\\d+\\b", className: "text-blue-400" },
-          { pattern: "\\b[A-Z][a-zA-Z0-9]*\\b", className: "text-yellow-400" }
+          { pattern: '\\b(const|let|var|function|return|if|else|for|while|class|new|async|await|import|export|from|default)\\b', className: 'text-purple-400 font-semibold' },
+          { pattern: '\\b(true|false|null|undefined)\\b', className: 'text-orange-400' },
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: "'[^']*'", className: 'text-green-400' },
+          { pattern: '`[^`]*`', className: 'text-green-400' },
+          { pattern: '//.*$', className: 'text-gray-500 italic' },
+          { pattern: '\\b\\d+\\b', className: 'text-blue-400' },
+          { pattern: '\\b[A-Z][a-zA-Z0-9]*\\b', className: 'text-yellow-400' }
         );
         break;
       case "python":
         patterns.push(
-          {
-            pattern:
-              "\\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|lambda|yield)\\b",
-            className: "text-purple-400 font-semibold",
-          },
-          { pattern: "\\b(True|False|None)\\b", className: "text-orange-400" },
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "'[^']*'", className: "text-green-400" },
-          { pattern: "#.*$", className: "text-gray-500 italic" },
-          { pattern: "\\b\\d+\\b", className: "text-blue-400" }
+          { pattern: '\\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|lambda|yield)\\b', className: 'text-purple-400 font-semibold' },
+          { pattern: '\\b(True|False|None)\\b', className: 'text-orange-400' },
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: "'[^']*'", className: 'text-green-400' },
+          { pattern: '#.*$', className: 'text-gray-500 italic' },
+          { pattern: '\\b\\d+\\b', className: 'text-blue-400' }
         );
         break;
       case "java":
         patterns.push(
-          {
-            pattern:
-              "\\b(public|private|protected|static|void|class|interface|extends|implements|new|return|if|else|for|while)\\b",
-            className: "text-purple-400 font-semibold",
-          },
-          { pattern: "\\b(true|false|null)\\b", className: "text-orange-400" },
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "//.*$", className: "text-gray-500 italic" },
-          { pattern: "\\b\\d+\\b", className: "text-blue-400" }
+          { pattern: '\\b(public|private|protected|static|void|class|interface|extends|implements|new|return|if|else|for|while)\\b', className: 'text-purple-400 font-semibold' },
+          { pattern: '\\b(true|false|null)\\b', className: 'text-orange-400' },
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: '//.*$', className: 'text-gray-500 italic' },
+          { pattern: '\\b\\d+\\b', className: 'text-blue-400' }
         );
         break;
       case "html":
         patterns.push(
-          { pattern: "<[^>]+>", className: "text-blue-400" },
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "'[^']*'", className: "text-green-400" },
-          { pattern: "<!--[^-]*-->", className: "text-gray-500 italic" }
+          { pattern: '<[^>]+>', className: 'text-blue-400' },
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: "'[^']*'", className: 'text-green-400' },
+          { pattern: '<!--[^-]*-->', className: 'text-gray-500 italic' }
         );
         break;
       case "css":
         patterns.push(
-          { pattern: "\\b[a-z-]+(?=:)", className: "text-blue-400" },
-          { pattern: "[.#][a-zA-Z0-9_-]+", className: "text-yellow-400" },
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "'[^']*'", className: "text-green-400" },
-          { pattern: "/\\*[^*]*\\*/", className: "text-gray-500 italic" },
-          {
-            pattern: "\\b\\d+(?:px|em|rem|%|vh|vw)?\\b",
-            className: "text-orange-400",
-          }
+          { pattern: '\\b[a-z-]+(?=:)', className: 'text-blue-400' },
+          { pattern: '[.#][a-zA-Z0-9_-]+', className: 'text-yellow-400' },
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: "'[^']*'", className: 'text-green-400' },
+          { pattern: '/\\*[^*]*\\*/', className: 'text-gray-500 italic' },
+          { pattern: '\\b\\d+(?:px|em|rem|%|vh|vw)?\\b', className: 'text-orange-400' }
         );
         break;
       default:
         patterns.push(
-          { pattern: '"[^"]*"', className: "text-green-400" },
-          { pattern: "'[^']*'", className: "text-green-400" },
-          { pattern: "//.*$", className: "text-gray-500 italic" },
-          { pattern: "\\b\\d+\\b", className: "text-blue-400" }
+          { pattern: '"[^"]*"', className: 'text-green-400' },
+          { pattern: "'[^']*'", className: 'text-green-400' },
+          { pattern: '//.*$', className: 'text-gray-500 italic' },
+          { pattern: '\\b\\d+\\b', className: 'text-blue-400' }
         );
     }
-
+    
     return patterns;
   };
 
@@ -275,38 +254,37 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           </div>
 
           {/* Other users' cursors */}
-          {safeCursors.length > 0 &&
-            safeCursors.map((cursor) => {
-              const lines = code.split("\n");
-              let totalChars = 0;
-              for (let i = 0; i < cursor.line - 1; i++) {
-                totalChars += lines[i].length + 1; // +1 for newline
-              }
-              totalChars += cursor.column - 1;
+          {safeCursors.length > 0 && safeCursors.map((cursor) => {
+            const lines = code.split("\n");
+            let totalChars = 0;
+            for (let i = 0; i < cursor.line - 1; i++) {
+              totalChars += lines[i].length + 1; // +1 for newline
+            }
+            totalChars += cursor.column - 1;
 
-              return (
+            return (
+              <div
+                key={cursor.userId}
+                className="absolute pointer-events-none"
+                style={{
+                  top: `${(cursor.line - 1) * 1.5 + 1}rem`,
+                  left: `${(cursor.column - 1) * 0.6 + 1}rem`,
+                  zIndex: 3,
+                }}
+              >
                 <div
-                  key={cursor.userId}
-                  className="absolute pointer-events-none"
-                  style={{
-                    top: `${(cursor.line - 1) * 1.5 + 1}rem`,
-                    left: `${(cursor.column - 1) * 0.6 + 1}rem`,
-                    zIndex: 3,
-                  }}
+                  className="w-0.5 h-6 animate-pulse"
+                  style={{ backgroundColor: cursor.color }}
+                />
+                <div
+                  className="absolute -top-6 left-0 px-2 py-0.5 text-xs text-white rounded whitespace-nowrap"
+                  style={{ backgroundColor: cursor.color }}
                 >
-                  <div
-                    className="w-0.5 h-6 animate-pulse"
-                    style={{ backgroundColor: cursor.color }}
-                  />
-                  <div
-                    className="absolute -top-6 left-0 px-2 py-0.5 text-xs text-white rounded whitespace-nowrap"
-                    style={{ backgroundColor: cursor.color }}
-                  >
-                    {cursor.userName}
-                  </div>
+                  {cursor.userName}
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
 
           {/* Actual Textarea (Transparent, on top for input) */}
           <textarea
@@ -343,3 +321,4 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     </div>
   );
 };
+

@@ -17,10 +17,27 @@ class DreamToPlanService {
     journalContent: string,
     journalDate?: Date
   ): Promise<DreamToPlanResult> {
-    const prompt = `You are an intelligent action extractor. Analyze the following text and detect specific actionable intents. Be VERY precise - only identify actions that the user explicitly wants.
+    const prompt = `You are an intelligent journal analyzer. Analyze the following text and extract themes, goals, and actionable items. Be VERY precise in your analysis.
 
 User Text:
 "${journalContent}"
+
+ANALYSIS INSTRUCTIONS:
+
+1. THEME ANALYSIS: Identify key themes, topics, and recurring ideas in the journal entry. Look for:
+   - Emotional patterns (stress, excitement, motivation, etc.)
+   - Work/school topics (assignments, projects, subjects)
+   - Personal development themes (health, relationships, hobbies)
+   - Achievement/personal growth themes
+   - Struggle/challenge themes
+   Provide 2-5 key themes with confidence scores (0-100).
+
+2. GOAL EXTRACTION: Identify any explicit or implicit goals mentioned in the journal entry. Look for:
+   - Long-term aspirations and dreams
+   - Short-term objectives
+   - Personal improvements
+   - Academic/career targets
+   Extract goals with titles, descriptions, priorities (high/medium/low), and suggested due dates if mentioned.
 
 CRITICAL INSTRUCTIONS - Detect these action types:
 
@@ -63,8 +80,23 @@ STRICT RULES:
 
 Please respond in the following JSON format:
 {
-  "suggestedGoals": [],
-  "motivationInsights": "",
+  "themes": [
+    {
+      "name": "Theme name (e.g., 'Academic Pressure', 'Personal Growth', 'Time Management')",
+      "description": "Brief description of how this theme appears in the journal",
+      "confidence": 85,
+      "tags": ["tag1", "tag2"]
+    }
+  ],
+  "suggestedGoals": [
+    {
+      "title": "Goal title",
+      "description": "Goal description",
+      "priority": "high|medium|low",
+      "suggestedDueDate": "YYYY-MM-DD or null"
+    }
+  ],
+  "motivationInsights": "Provide insights about the user's motivation, mood, and emotional state",
   "actionItems": [
     {
       "text": "Action item text (e.g., 'Create team for e-commerce website' or 'Complete OS assignment' or 'Complete CN assignment')",
@@ -86,38 +118,101 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
         const result = await geminiModel.generateContent(prompt);
         const response = result.response;
         responseData = response.text();
-      } catch (geminiError) {
+      } catch (geminiError: any) {
         console.warn("Gemini API direct call failed, falling back to unified service:", geminiError);
-        // Fallback to unified service if Gemini API fails
-        const response = await unifiedAIService.generateResponse(prompt, "");
-        if (!response.success || !response.data) {
-          throw new Error(response.error || "Failed to analyze intent");
+        
+        // Check if it's a referrer blocking error (403)
+        const isReferrerBlocked = geminiError?.message?.includes("403") || 
+                                  geminiError?.message?.includes("HTTP_REFERRER_BLOCKED") || 
+                                  geminiError?.message?.includes("referer") ||
+                                  geminiError?.message?.includes("referrer") ||
+                                  (geminiError?.status === 403);
+        
+        if (isReferrerBlocked) {
+          console.warn("API key referrer restriction detected. Consider updating your Google Cloud API key settings to allow requests from localhost.");
+          
+          // If it's a referrer block, the unified service will also fail with the same issue
+          // So we should throw a helpful error immediately instead of trying the fallback
+          throw new Error("API_KEY_HTTP_REFERRER_BLOCKED: Your Google Cloud API key has HTTP referrer restrictions that block requests from http://localhost:5176/. Please update your API key settings in Google Cloud Console to allow this referrer, or remove referrer restrictions for localhost.");
         }
-        responseData = response.data;
+        
+        // For other errors, try fallback to unified service
+        try {
+          const response = await unifiedAIService.generateResponse(prompt, "");
+          
+          // Check if the unified service returned an error response
+          if (!response.success) {
+            throw new Error(response.error || "Failed to analyze intent");
+          }
+          
+          if (!response.data) {
+            throw new Error("No data received from AI service");
+          }
+          
+          // Check if response looks like an error message (unified service sometimes returns error messages as data)
+          const dataStr = String(response.data).trim();
+          if (dataStr.startsWith("I couldn't") || 
+              dataStr.startsWith("Temporary AI") ||
+              dataStr.startsWith("Error") ||
+              dataStr.includes("API key") ||
+              dataStr.includes("forbidden") ||
+              dataStr.includes("403")) {
+            throw new Error(`AI service returned an error: ${dataStr.substring(0, 200)}`);
+          }
+          
+          responseData = response.data;
+        } catch (fallbackError: any) {
+          console.error("Unified service fallback also failed:", fallbackError);
+          
+          // If fallback also failed, throw a clear error
+          if (fallbackError?.message) {
+            throw fallbackError;
+          }
+          throw new Error("Unable to connect to AI service. Please check your API configuration and try again.");
+        }
       }
 
       if (responseData) {
+        // Check if response looks like an error message instead of JSON
+        const trimmedResponse = responseData.trim();
+        if (trimmedResponse.startsWith("I couldn't") || 
+            trimmedResponse.startsWith("Temporary AI") ||
+            trimmedResponse.startsWith("Error") ||
+            (!trimmedResponse.startsWith("{") && !trimmedResponse.startsWith("```"))) {
+          console.warn("Received non-JSON response from AI service:", trimmedResponse.substring(0, 100));
+          throw new Error("AI service returned an error message instead of analysis results. Please check your API configuration.");
+        }
+
         // Try to parse JSON from response
         let parsed: DreamToPlanResult;
 
-        // Extract JSON from response (might be wrapped in markdown code blocks)
-        const jsonMatch = responseData.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || 
-                         responseData.match(/(\{[\s\S]*\})/);
-        
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[1]);
-        } else {
-          // Fallback: try to parse the whole response as JSON
-          parsed = JSON.parse(responseData);
+        try {
+          // Extract JSON from response (might be wrapped in markdown code blocks)
+          const jsonMatch = responseData.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || 
+                           responseData.match(/(\{[\s\S]*\})/);
+          
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[1]);
+          } else {
+            // Fallback: try to parse the whole response as JSON
+            parsed = JSON.parse(responseData);
+          }
+        } catch (parseError) {
+          console.error("Failed to parse JSON response:", parseError);
+          console.error("Response data:", responseData.substring(0, 500));
+          throw new Error("Failed to parse AI response. The service may be experiencing issues. Please try again.");
         }
 
         // Ensure arrays are initialized
+        if (!parsed.themes) parsed.themes = [];
         if (!parsed.suggestedGoals) parsed.suggestedGoals = [];
         if (!parsed.actionItems) parsed.actionItems = [];
         if (!parsed.motivationInsights) parsed.motivationInsights = "";
 
         // Log for debugging
         console.log("🎯 Dream-to-Plan Analysis Result:", {
+          themesCount: parsed.themes?.length,
+          themes: parsed.themes,
           actionItemsCount: parsed.actionItems?.length,
           actionItems: parsed.actionItems,
         });
@@ -147,15 +242,35 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
 
       // Fallback response
       return {
+        themes: [],
         suggestedGoals: [],
         motivationInsights: "Unable to analyze journal entry. Please try again or rephrase.",
         actionItems: [],
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error analyzing journal:", error);
+      
+      // Provide more helpful error messages based on error type
+      let errorMessage = "Error analyzing journal entry. Please try again.";
+      
+      if (error?.message) {
+        if (error.message.includes("API_KEY_HTTP_REFERRER_BLOCKED") || 
+            error.message.includes("referer") || 
+            error.message.includes("403")) {
+          errorMessage = "API key configuration issue: Requests from localhost are blocked. Please update your Google Cloud API key settings to allow requests from http://localhost:5176/ or use a different API key without referrer restrictions.";
+        } else if (error.message.includes("parse") || error.message.includes("JSON")) {
+          errorMessage = "Failed to process AI response. The service may be experiencing issues. Please check your API configuration and try again.";
+        } else if (error.message.includes("connect") || error.message.includes("Unable to connect")) {
+          errorMessage = "Unable to connect to AI service. Please check your API key configuration in your environment variables.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       return {
+        themes: [],
         suggestedGoals: [],
-        motivationInsights: "Error analyzing journal entry. Please try again.",
+        motivationInsights: errorMessage,
         actionItems: [],
       };
     }

@@ -244,4 +244,3 @@ export const VibrationSettings: React.FC<VibrationSettingsProps> = ({
     </div>
   );
 };
-

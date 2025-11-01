@@ -95,10 +95,10 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-bold text-black">Join Team</h2>
+          <h2 className="text-xl font-bold text-gray-900">Join Team</h2>
         </div>
 
         {success ? (
@@ -118,7 +118,7 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
         ) : (
           <>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-black mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Invite Code
               </label>
               <input
@@ -141,19 +141,10 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
             )}
 
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 text-black">
+              <div className="flex items-center gap-2 text-blue-800 text-sm">
                 <Mail className="w-4 h-4" />
-                <span className="text-sm">
+                <span>
                   Enter the invite code you received via email to join a team.
-                </span>
-              </div>
-            </div>
-
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 text-black">
-                <Users className="w-4 h-4" />
-                <span className="text-sm">
-                  Your role will be assigned by the team administrator.
                 </span>
               </div>
             </div>

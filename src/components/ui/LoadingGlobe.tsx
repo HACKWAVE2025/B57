@@ -9,7 +9,7 @@ interface LoadingGlobeProps {
 export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
   size = 60,
   className = "",
-  color = "rgb(30, 41, 59)",
+  color = "rgb(30, 41, 59)", // Default dark slate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -36,11 +36,13 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
       const centerY = size / 2;
       const radius = size * 0.3;
 
+      // Draw rotating wireframe globe with darker colors
       ctx.strokeStyle = `${color
         .replace("rgb", "rgba")
         .replace(")", ", 0.9)")}`;
       ctx.lineWidth = 1.5;
 
+      // Longitudinal lines
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3 + time;
         ctx.beginPath();
@@ -51,6 +53,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           const z = Math.sin(angle) * Math.sin(phi) * radius;
 
           if (z > -radius * 0.5) {
+            // Only draw front half
             if (j === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           }
@@ -58,6 +61,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
         ctx.stroke();
       }
 
+      // Latitudinal lines
       for (let i = 1; i < 5; i++) {
         const phi = (i * Math.PI) / 5;
         const ringRadius = Math.sin(phi) * radius;
@@ -70,6 +74,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           const z = Math.sin(theta) * ringRadius;
 
           if (z > -radius * 0.5) {
+            // Only draw front half
             if (j === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           }
@@ -77,6 +82,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
         ctx.stroke();
       }
 
+      // Add pulsing nodes
       const nodes = [
         { angle: time * 0.5, phi: Math.PI * 0.3 },
         { angle: time * 0.7 + Math.PI * 0.5, phi: Math.PI * 0.5 },
@@ -92,6 +98,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           const pulse = Math.sin(time * 4) * 0.3 + 0.7;
           const nodeSize = 2 * pulse;
 
+          // Darker glow effect
           const gradient = ctx.createRadialGradient(
             x,
             y,
@@ -118,6 +125,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           ctx.arc(x, y, nodeSize * 2, 0, Math.PI * 2);
           ctx.fill();
 
+          // Darker solid center
           ctx.fillStyle = `${color.replace("rgb", "rgba").replace(")", ", 0.95)")}`;
           ctx.beginPath();
           ctx.arc(x, y, nodeSize * 0.3, 0, Math.PI * 2);
@@ -147,6 +155,3 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
     />
   );
 };
-
-
-

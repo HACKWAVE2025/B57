@@ -219,4 +219,3 @@ export const getThemeClasses = (
     brand: `${superAppColors.text.brand} ${base.transition}`,
   };
 };
-

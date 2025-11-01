@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  phoneNumber?: string;
   createdAt: string;
   authProvider?: string;
   hasGoogleDriveAccess?: boolean;
@@ -21,9 +22,10 @@ export interface FileItem {
   mimeType?: string;
   size?: number;
   parentId?: string;
-  content?: string;
+  content?: string; // Base64 for files (localStorage fallback)
   uploadedAt: string;
   userId: string;
+  // Google Drive specific properties
   driveFileId?: string;
   webViewLink?: string;
   webContentLink?: string;
@@ -72,6 +74,3 @@ export interface AIAnalysis {
   userId: string;
   createdAt: string;
 }
-
-
-

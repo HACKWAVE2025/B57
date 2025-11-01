@@ -228,4 +228,3 @@ export const componentThemes = {
     brand: "text-blue-600 dark:text-blue-400",
   },
 };
-

@@ -23,6 +23,20 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-D25YP2476J",
 };
 
+// Debug logging for production
+console.log("Environment check:", {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  mode: import.meta.env.MODE,
+  usingFallbacks: !import.meta.env.VITE_FIREBASE_API_KEY,
+  envVars: {
+    VITE_FIREBASE_API_KEY: !!import.meta.env.VITE_FIREBASE_API_KEY,
+    VITE_FIREBASE_AUTH_DOMAIN: !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    VITE_FIREBASE_PROJECT_ID: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  }
+});
+
 // Initialize Firebase
 console.log("Initializing Firebase...");
 let app: FirebaseApp;
@@ -34,21 +48,27 @@ try {
   app = initializeApp(firebaseConfig);
   console.log("✅ Firebase initialized successfully");
   
+  // Initialize Firebase Authentication and get a reference to the service
   auth = getAuth(app);
   console.log("✅ Firebase Auth initialized");
   
+  // Initialize Cloud Firestore and get a reference to the service
+  // Use getFirestore instead of initializeFirestore to avoid conflicts
   db = getFirestore(app);
   console.log("✅ Firestore initialized");
   
+  // Configure Google Auth Provider with necessary scopes
   googleProvider = new GoogleAuthProvider();
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
   googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
-  // Force account picker to always show
+  googleProvider.addScope("https://www.googleapis.com/auth/user.phonenumbers.read");
+  console.log("✅ Google Auth Provider configured");
+  
+  // Set custom parameters for Google OAuth
   googleProvider.setCustomParameters({
-    prompt: "select_account"
+    prompt: "select_account",
   });
-  console.log("✅ Google Auth Provider configured with account picker");
   
 } catch (error) {
   console.error("❌ Firebase initialization failed:", error);
@@ -57,8 +77,9 @@ try {
 
 // Export the initialized services
 export { auth, db, googleProvider };
+
+// Set the client ID for Google OAuth (optional, Firebase handles this automatically)
+// but we can access it for debugging
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 export default app;
-
-
-

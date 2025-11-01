@@ -1,19 +1,36 @@
 import React, { useRef, useEffect } from "react";
 
+/**
+ * Subtle particle field: soft glowing dots drifting slowly.
+ * Lightweight (no three.js) and respects prefers-reduced-motion.
+ */
 export const ParticleField: React.FC<{
   className?: string;
+  /** Desired baseline particle count on ~1280x720 viewport */
   baseCount?: number;
+  /** Draw faint lines between nearby particles */
   connectLines?: boolean;
+  /** Max distance in px for connecting lines */
   lineDistance?: number;
+  /** Speed multiplier for particle movement (1 = default) */
   speedFactor?: number;
+  /** Base particle color (hex or rgb) */
   particleColor?: string;
+  /** Outer glow color */
   glowColor?: string;
+  /** Line (edge) color */
   lineColor?: string;
+  /** Multiplier for particle size (1 = default) */
   sizeFactor?: number;
+  /** Brightness/alpha multiplier */
   brightness?: number;
+  /** Line width multiplier */
   lineWidthFactor?: number;
+  /** Maximum multiplier applied after area scaling */
   maxMultiplier?: number;
+  /** Max particle count for exhaustive pair line drawing before switching to sampling */
   maxLineParticles?: number;
+  /** Target maximum number of lines per frame (sampling budget) */
   targetLines?: number;
 }> = ({
   className = "",
@@ -21,9 +38,9 @@ export const ParticleField: React.FC<{
   connectLines = true,
   lineDistance = 140,
   speedFactor = 1,
-  particleColor = "#60a5fa",
-  glowColor = "#93c5fd",
-  lineColor = "#3b82f6",
+  particleColor = "#60a5fa", // light blue (tailwind blue-400)
+  glowColor = "#93c5fd", // lighter glow (blue-300)
+  lineColor = "#3b82f6", // edge (blue-500)
   sizeFactor = 1,
   brightness = 1,
   lineWidthFactor = 1,
@@ -49,7 +66,7 @@ export const ParticleField: React.FC<{
     vy: number;
     radius: number;
     baseRadius: number;
-    glow: number;
+    glow: number; // phase for pulsing effect
   }
 
   useEffect(() => {
@@ -66,6 +83,7 @@ export const ParticleField: React.FC<{
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Helper to convert color + alpha into rgba()
     const toRGBA = (hexOrRgb: string, alpha: number) => {
       if (hexOrRgb.startsWith("#")) {
         let hex = hexOrRgb.slice(1);
@@ -89,7 +107,7 @@ export const ParticleField: React.FC<{
           return `rgba(${parts.join(",")},${alpha})`;
         });
       }
-      return hexOrRgb;
+      return hexOrRgb; // fallback
     };
 
     const renderParticle = (ctx: CanvasRenderingContext2D, p: Particle) => {
@@ -139,7 +157,7 @@ export const ParticleField: React.FC<{
       const dpr = window.devicePixelRatio || 1;
       canvas.width = canvas.clientWidth * dpr;
       canvas.height = canvas.clientHeight * dpr;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
       ctx.scale(dpr, dpr);
       initParticles();
     };
@@ -148,7 +166,7 @@ export const ParticleField: React.FC<{
       if (reducedMotion.current) {
         ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         particlesRef.current.forEach((p) => renderParticle(ctx, p));
-        return;
+        return; // static frame only
       }
       const dt = lastTimeRef.current ? now - lastTimeRef.current : 16;
       lastTimeRef.current = now;
@@ -179,12 +197,14 @@ export const ParticleField: React.FC<{
         renderParticle(ctx, p);
       });
 
+      // Connecting lines (adaptive: exhaustive below threshold, sampled above)
       if (connectLines) {
         const n = particles.length;
         const maxDist2 = lineDistance * lineDistance;
         let linesDrawn = 0;
         const budget = targetLines;
         if (n <= maxLineParticles) {
+          // Full pair scan with budget early exit
           for (let i = 0; i < n && linesDrawn < budget; i++) {
             const p1 = particles[i];
             for (let j = i + 1; j < n && linesDrawn < budget; j++) {
@@ -208,7 +228,8 @@ export const ParticleField: React.FC<{
             }
           }
         } else {
-          const attemptsLimit = budget * 4;
+          // Random sampling of pairs
+          const attemptsLimit = budget * 4; // heuristic oversampling factor
           for (
             let attempts = 0;
             attempts < attemptsLimit && linesDrawn < budget;
@@ -298,6 +319,3 @@ export const ParticleField: React.FC<{
 };
 
 export default ParticleField;
-
-
-

@@ -14,7 +14,7 @@ import {
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { AIStatus } from "./notifications/AIStatus";
+import { AIStatus } from "./AIStatus";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 
 interface ToolResult {

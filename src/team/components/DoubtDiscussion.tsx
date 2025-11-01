@@ -1,5 +1,5 @@
-import React from "react";
-import { Brain } from "lucide-react";
+import React from 'react';
+import { Brain } from 'lucide-react';
 
 interface DoubtDiscussionProps {
   teamId: string;
@@ -14,7 +14,7 @@ export const DoubtDiscussionComponent: React.FC<DoubtDiscussionProps> = ({
   userId,
   userName,
   userRole,
-  className = "",
+  className = '',
 }) => {
   return (
     <div className={`flex h-full ${className}`}>

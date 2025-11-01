@@ -76,4 +76,3 @@ export const StreakDisplay: React.FC<StreakDisplayProps> = ({
     </div>
   );
 };
-

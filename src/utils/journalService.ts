@@ -27,6 +27,12 @@ export interface JournalEntry {
 }
 
 export interface DreamToPlanResult {
+  themes?: Array<{
+    name: string;
+    description: string;
+    confidence: number; // 0-100
+    tags?: string[];
+  }>;
   suggestedGoals: Array<{
     title: string;
     description: string;

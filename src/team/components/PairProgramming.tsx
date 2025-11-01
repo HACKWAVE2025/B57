@@ -294,41 +294,36 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
 
   const runCode = async () => {
     if (!currentSession) return;
-
+    
     setIsRunning(true);
     setShowConsole(true);
-    setConsoleOutput(["⏳ Executing code..."]);
+    setConsoleOutput(['⏳ Executing code...']);
 
     try {
       const language = currentSession.language.toLowerCase();
       let result;
 
       // Analyze code complexity first
-      const complexity = codeExecutionService.analyzeComplexity(
-        currentSession.code,
-        language
-      );
+      const complexity = codeExecutionService.analyzeComplexity(currentSession.code, language);
 
       // Use different execution methods based on language
-      if (language === "javascript" || language === "typescript") {
+      if (language === 'javascript' || language === 'typescript') {
         // Execute JavaScript locally for instant feedback
-        result = codeExecutionService.executeJavaScriptLocally(
-          currentSession.code
-        );
+        result = codeExecutionService.executeJavaScriptLocally(currentSession.code);
         result.complexity = complexity;
-      } else if (language === "html") {
+      } else if (language === 'html') {
         // Open HTML in new window
         result = codeExecutionService.executeHTML(currentSession.code);
-      } else if (language === "css") {
+      } else if (language === 'css') {
         // Preview CSS with sample HTML
         result = codeExecutionService.executeCSS(currentSession.code);
       } else if (codeExecutionService.isLanguageSupported(language)) {
         // Use Piston API for other languages
         setConsoleOutput([
-          "⏳ Executing code on remote server...",
-          "💡 This may take a few seconds...",
+          '⏳ Executing code on remote server...',
+          '💡 This may take a few seconds...'
         ]);
-
+        
         result = await codeExecutionService.executeCode({
           language,
           code: currentSession.code,
@@ -339,7 +334,7 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
 
         // Add execution time if available
         if (result.executionTime) {
-          result.output.push("");
+          result.output.push('');
           result.output.push(`⚡ Execution time: ${result.executionTime}ms`);
         }
       } else {
@@ -348,53 +343,47 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
           success: false,
           output: [
             `⚠️ "${language}" is not yet configured for execution.`,
-            "",
-            "✅ Supported languages:",
-            ...codeExecutionService
-              .getSupportedLanguages()
-              .map((lang) => `  • ${lang}`),
-            "",
-            "💡 You can still:",
-            "  • Write and edit code collaboratively",
-            "  • Save code snapshots",
-            "  • Download code to run locally",
-            "  • Copy code to clipboard",
+            '',
+            '✅ Supported languages:',
+            ...codeExecutionService.getSupportedLanguages().map(lang => `  • ${lang}`),
+            '',
+            '💡 You can still:',
+            '  • Write and edit code collaboratively',
+            '  • Save code snapshots',
+            '  • Download code to run locally',
+            '  • Copy code to clipboard',
           ],
         };
       }
 
       // Add complexity analysis to output if available
       if (result.complexity) {
-        result.output.push("");
-        result.output.push("📊 Complexity Analysis:");
+        result.output.push('');
+        result.output.push('📊 Complexity Analysis:');
         result.output.push(`   Time:  ${result.complexity.time}`);
         result.output.push(`   Space: ${result.complexity.space}`);
-        result.output.push("");
+        result.output.push('');
         result.output.push(...result.complexity.analysis);
       }
 
       setConsoleOutput(result.output);
-
+      
       // Send execution result to chat if successful
       if (result.success && currentSession) {
         await pairProgrammingService.sendMessage(
           currentSession.id,
-          `✅ Code executed successfully by ${
-            user?.username || user?.email
-          } | Time: ${result.complexity?.time || "N/A"} | Space: ${
-            result.complexity?.space || "N/A"
-          }`,
-          "system"
+          `✅ Code executed successfully by ${user?.username || user?.email} | Time: ${result.complexity?.time || 'N/A'} | Space: ${result.complexity?.space || 'N/A'}`,
+          'system'
         );
       }
     } catch (err: any) {
       setConsoleOutput([
         `❌ Execution error: ${err.message}`,
-        "",
-        "💡 Tips:",
-        "  • Check your internet connection",
-        "  • Verify your code syntax",
-        "  • Try running again",
+        '',
+        '💡 Tips:',
+        '  • Check your internet connection',
+        '  • Verify your code syntax',
+        '  • Try running again',
       ]);
     } finally {
       setIsRunning(false);
@@ -779,9 +768,7 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
               <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-gray-300">
-                    Console Output
-                  </span>
+                  <span className="text-sm font-medium text-gray-300">Console Output</span>
                 </div>
                 <button
                   onClick={() => setConsoleOutput([])}
@@ -1028,3 +1015,4 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
     </div>
   );
 };
+
