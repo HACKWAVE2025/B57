@@ -43,7 +43,12 @@ try {
   googleProvider = new GoogleAuthProvider();
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
-  console.log("✅ Google Auth Provider configured");
+  googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+  // Force account picker to always show
+  googleProvider.setCustomParameters({
+    prompt: "select_account"
+  });
+  console.log("✅ Google Auth Provider configured with account picker");
   
 } catch (error) {
   console.error("❌ Firebase initialization failed:", error);
@@ -54,4 +59,5 @@ try {
 export { auth, db, googleProvider };
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 export default app;
+
 

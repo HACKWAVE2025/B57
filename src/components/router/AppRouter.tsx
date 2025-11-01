@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Dashboard } from "../dashboards/Dashboard";
+import { FileManager } from "../file/FileManager";
 import { InterviewPrep } from "../InterviewPrep/InterviewPrep";
 import { TeamSpace } from "../team/TeamSpace";
 
@@ -9,6 +10,7 @@ export const AppRouter: React.FC = () => {
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/files/*" element={<FileManager />} />
       <Route path="/interview/*" element={<InterviewPrep />} />
       <Route path="/team/*" element={<TeamSpace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
