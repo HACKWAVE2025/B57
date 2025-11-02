@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { realTimeAuth } from "./realTimeAuth";
+import { calendarService } from "./calendarService";
 
 export interface JournalEntry {
   id: string;
@@ -72,6 +73,9 @@ class JournalService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Automatically sync with calendar
+    await calendarService.syncJournalsToCalendar(user.id);
 
     return {
       ...entry,
@@ -136,10 +140,16 @@ class JournalService {
     }
 
     await updateDoc(doc(this.getJournalsCollection(userId), entryId), updatesToApply);
+    
+    // Automatically sync with calendar after update
+    await calendarService.syncJournalsToCalendar(userId);
   }
 
   async deleteJournalEntry(userId: string, entryId: string): Promise<void> {
     await deleteDoc(doc(this.getJournalsCollection(userId), entryId));
+    
+    // Automatically sync with calendar after deletion
+    await calendarService.syncJournalsToCalendar(userId);
   }
 }
 

@@ -21,6 +21,7 @@ import { FileItem } from "../types";
 import { GeneralLayout } from "../layout/PageLayout";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { calendarService } from "../../utils/calendarService";
 import { unifiedAIService } from "../../utils/aiConfig";
 import { extractTextFromPdfDataUrl } from "../../utils/pdfText";
 import { FilePreviewModal } from "../FileManager/FilePreviewModal";
@@ -339,6 +340,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         const success = await driveStorageUtils.deleteFile(fileId);
         if (success) {
           await loadFiles();
+          
+          // Automatically sync with calendar after deletion
+          if (user) {
+            await calendarService.syncFilesToCalendar(user.id);
+          }
         }
       } catch (error) {
         console.error("Error deleting file:", error);

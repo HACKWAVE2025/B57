@@ -25,6 +25,7 @@ import { GlobalPomodoroProvider } from "./contexts/GlobalPomodoroContext";
 import { GlobalPomodoroWidget } from "./components/pomodoro/GlobalPomodoroWidget";
 import { PomodoroEducation } from "./components/pomodoro/PomodoroEducation";
 import { useGlobalPomodoro } from "./contexts/GlobalPomodoroContext";
+import { useWeeklyProgressEmail } from "./hooks/useWeeklyProgressEmail";
 // Import the file permissions fixer to make it available in console
 import "./utils/fixExistingFilePermissions";
 // Import EmailJS test functions for console testing
@@ -48,6 +49,9 @@ const AuthenticatedApp: React.FC = () => {
   
   // Global Pomodoro state
   const { isEducationVisible, hideEducation } = useGlobalPomodoro();
+
+  // Weekly progress email (sends automatically on Mondays)
+  useWeeklyProgressEmail();
 
   // Handle URL parameters for team invitations
   useEffect(() => {

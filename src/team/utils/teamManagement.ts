@@ -15,6 +15,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { calendarService } from "../../utils/calendarService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { emailService } from "../../utils/emailService";
 import { teamFilePermissionService } from "./teamFilePermissionService";
@@ -181,6 +182,11 @@ class TeamManagementService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Automatically sync all items with calendar (teams may create projects/tasks)
+    await calendarService.syncAllItemsToCalendar(user.id).catch(err =>
+      console.error("Error syncing calendar after team creation:", err)
+    );
 
     return newTeam;
   }

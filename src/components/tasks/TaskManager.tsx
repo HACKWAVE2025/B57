@@ -12,6 +12,7 @@ import {
 import { Task } from "../../types";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { calendarService } from "../../utils/calendarService";
 import { isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import SwipeableTaskItem from "./SwipeableTaskItem";
 import { TaskCelebration } from "./TaskCelebration";
@@ -141,6 +142,8 @@ export const TaskManager: React.FC = () => {
       resetForm();
       setShowAddTask(false);
       await loadTasks();
+      // Automatically sync with calendar
+      await calendarService.syncTodosToCalendar(user.id);
     } catch (error) {
       console.error("Error adding task:", error);
       alert("Failed to add task. Please try again.");
@@ -172,6 +175,8 @@ export const TaskManager: React.FC = () => {
       setEditingTask(null);
       resetForm();
       await loadTasks();
+      // Automatically sync with calendar
+      await calendarService.syncTodosToCalendar(user.id);
     } catch (error) {
       console.error("Error updating task:", error);
       alert("Failed to update task. Please try again.");
@@ -185,6 +190,9 @@ export const TaskManager: React.FC = () => {
       await firestoreUserTasks.updateTask(user.id, task.id, {
         status: newStatus,
       });
+
+      // Automatically sync with calendar after status change
+      await calendarService.syncTodosToCalendar(user.id);
 
       // If task is being completed, trigger celebration
       if (newStatus === "completed") {
@@ -244,6 +252,8 @@ export const TaskManager: React.FC = () => {
     try {
       await firestoreUserTasks.deleteTask(user.id, taskId);
       await loadTasks();
+      // Automatically sync with calendar after deletion
+      await calendarService.syncTodosToCalendar(user.id);
     } catch (error) {
       console.error("Error deleting task:", error);
       alert("Failed to delete task. Please try again.");

@@ -22,6 +22,7 @@ import { ShortNote, NoteFolder } from "../types";
 import { storageUtils } from "../../utils/storage";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { calendarService } from "../../utils/calendarService";
 import { format } from "date-fns";
 import { GeneralLayout } from "../layout/PageLayout";
 
@@ -204,6 +205,11 @@ export const NotesManager: React.FC = () => {
       // Sync to Google Drive
       await syncNotesToDrive();
 
+      // Automatically sync with calendar
+      if (user) {
+        await calendarService.syncNotesToCalendar(user.id);
+      }
+
       resetForm();
       setShowEditor(false);
       setEditingNote(null);
@@ -235,6 +241,9 @@ export const NotesManager: React.FC = () => {
 
       // Sync to Google Drive
       await syncNotesToDrive();
+
+      // Automatically sync with calendar
+      await calendarService.syncNotesToCalendar(user.id);
     }
   };
 

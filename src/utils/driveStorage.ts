@@ -1,6 +1,7 @@
 import { FileItem, Task, ShortNote, AIAnalysis, NoteFolder } from "../types";
 import { googleDriveService, DriveFile } from "./googleDriveService";
 import { realTimeAuth } from "./realTimeAuth";
+import { calendarService } from "./calendarService";
 
 // Keys for localStorage fallback and caching
 const FILES_KEY = "super_study_files";
@@ -110,6 +111,12 @@ export const driveStorageUtils = {
         console.log("✅ Flashcards saved to Google Drive successfully");
         // Also save to localStorage as backup
         localStorage.setItem("super_study_flashcards", JSON.stringify(flashcards));
+        
+        // Automatically sync with calendar
+        calendarService.syncFlashcardsToCalendar(userId).catch(err =>
+          console.error("Error syncing flashcards to calendar:", err)
+        );
+        
         return true;
       } else {
         console.error("❌ Failed to save flashcards to Drive:", result.error);
@@ -312,6 +319,11 @@ export const driveStorageUtils = {
             files.push(fileItem);
             localStorage.setItem(FILES_KEY, JSON.stringify(files));
 
+            // Automatically sync with calendar
+            calendarService.syncFilesToCalendar(userId).catch(err => 
+              console.error("Error syncing file to calendar:", err)
+            );
+
             resolve(fileItem);
           };
           reader.readAsDataURL(file);
@@ -332,6 +344,10 @@ export const driveStorageUtils = {
         this.clearCache();
         const fileItem = this.driveFileToFileItem(result.data, userId);
         console.log("✅ Created FileItem:", fileItem);
+        
+        // Automatically sync with calendar
+        await calendarService.syncFilesToCalendar(userId);
+        
         return fileItem;
       }
 

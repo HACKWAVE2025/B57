@@ -1,0 +1,171 @@
+{
+  "name": "Weekly Progress Email (Webhook Integration)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "qhUVlmQv0SFYAMrz",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "qhUVlmQv0SFYAMrz",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user data from webhook body\n// n8n webhook receives JSON body directly in $input.item.json\nconst rawInput = $input.item.json;\n\n// The payload structure is: { user: {...}, timestamp: \"...\" }\n// So we need to access rawInput.user\nlet userData = rawInput.user || rawInput;\n\n// If rawInput doesn't have 'user' key but has the data directly\nif (!userData.userId && rawInput.userId) {\n  userData = rawInput;\n}\n\n// Debug output\nconsole.log('📦 Extracted userData keys:', Object.keys(userData));\nconsole.log('📊 Sample values:', {\n  totalTasks: userData.totalTasks,\n  completedTasks: userData.completedTasks,\n  currentStreak: userData.currentStreak\n});\n\n// Calculate week info if not provided\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst daysSinceStart = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24));\nconst weekNumber = userData.weekNumber || Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);\n\n// Format dates\nconst formatDate = (dateString) => {\n  const date = new Date(dateString);\n  return date.toLocaleDateString('en-US', { \n    weekday: 'long', \n    year: 'numeric', \n    month: 'long', \n    day: 'numeric' \n  });\n};\n\nconst weekStart = userData.weekStart ? formatDate(userData.weekStart) : formatDate(new Date(now.setDate(now.getDate() - now.getDay())));\nconst weekEnd = userData.weekEnd ? formatDate(userData.weekEnd) : formatDate(new Date(now.setDate(now.getDate() - now.getDay() + 6)));\n\nreturn {\n  json: {\n    // User Info\n    userId: userData.userId || 'unknown',\n    email: userData.email || '',\n    username: userData.username || 'User',\n    \n    // Week Info\n    currentWeek: weekNumber,\n    weekStart: weekStart,\n    weekEnd: weekEnd,\n    currentDate: formatDate(new Date()),\n    year: userData.year || now.getFullYear(),\n    progressPercentage: userData.progressPercentage || Math.round((weekNumber / 52) * 100),\n    \n    // Tasks Data - use Number() to ensure numeric values\n    totalTasks: Number(userData.totalTasks) || 0,\n    completedTasks: Number(userData.completedTasks) || 0,\n    pendingTasks: Number(userData.pendingTasks) || 0,\n    tasksThisWeek: Number(userData.tasksThisWeek) || 0,\n    completedTasksThisWeek: Number(userData.completedTasksThisWeek) || 0,\n    highPriorityTasks: Number(userData.highPriorityTasks) || 0,\n    \n    // Streak Data - use Number() to ensure numeric values\n    currentStreak: Number(userData.currentStreak) || 0,\n    longestStreak: Number(userData.longestStreak) || 0,\n    tasksCompletedToday: Number(userData.tasksCompletedToday) || 0,\n    totalTasksCompleted: Number(userData.totalTasksCompleted) || 0,\n    weeklyGoal: Number(userData.weeklyGoal) || 7,\n    tasksCompletedThisWeek: Number(userData.tasksCompletedThisWeek) || 0,\n    \n    // Interview Analytics - use Number() to ensure numeric values\n    totalInterviews: Number(userData.totalInterviews) || 0,\n    interviewsThisWeek: Number(userData.interviewsThisWeek) || 0,\n    averageScore: Number(userData.averageScore) || 0,\n    recentInterviewScore: userData.recentInterviewScore || null,\n    improvementTrend: userData.improvementTrend || 'stable',\n    \n    // Teams - use Number() to ensure numeric values\n    teamCount: Number(userData.teamCount) || 0,\n    \n    // Achievements - use Number() to ensure numeric values\n    achievementsUnlocked: Number(userData.achievementsUnlocked) || 0,\n    recentAchievements: userData.recentAchievements || []\n  }\n};"
+      },
+      "id": "process-webhook-data",
+      "name": "Process Webhook Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set email configuration while preserving all original data\nconst inputData = $input.item.json;\n\nreturn {\n  json: {\n    ...inputData,  // Keep ALL original data\n    emailSubject: (inputData.username || 'User') + \"'s Weekly Progress Report - Week \" + (inputData.currentWeek || 'N/A'),\n    emailRecipient: inputData.email || '',\n    senderName: 'Weekly Progress System',\n    senderEmail: inputData.email || ''\n  }\n};"
+      },
+      "id": "set-email-config",
+      "name": "Set Email Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate detailed personalized email content\nconst data = $input.item.json;\n\n// Ensure critical fields exist\nif (!data.emailRecipient && data.email) {\n  data.emailRecipient = data.email;\n}\n\nif (!data.emailSubject) {\n  data.emailSubject = (data.username || 'User') + \"'s Weekly Progress Report - Week \" + (data.currentWeek || 'N/A');\n}\n\n// Debug logging\nconsole.log('📧 Generate Email Content - emailRecipient:', data.emailRecipient);\nconsole.log('📧 Generate Email Content - emailSubject:', data.emailSubject);\n\n// Calculate completion rate\nconst completionRate = data.totalTasks > 0 \n  ? Math.round((data.completedTasks / data.totalTasks) * 100) \n  : 0;\n\n// Weekly goal progress\nconst weeklyGoalProgress = data.weeklyGoal > 0\n  ? Math.round((data.tasksCompletedThisWeek / data.weeklyGoal) * 100)\n  : 0;\n\n// Generate improvement message\nlet improvementMessage = '';\nif (data.improvementTrend === 'improving') {\n  improvementMessage = '📈 Great news! Your interview scores are trending upward!';\n} else if (data.improvementTrend === 'declining') {\n  improvementMessage = '📉 Your interview scores need attention. Consider more practice sessions.';\n} else {\n  improvementMessage = '📊 Your interview performance is stable. Keep up the consistent practice!';\n}\n\n// Generate achievement message\nlet achievementMessage = '';\nif (data.recentAchievements && Array.isArray(data.recentAchievements) && data.recentAchievements.length > 0) {\n  achievementMessage = '🎉 Recent Achievements: ' + data.recentAchievements.join(', ');\n} else if (data.achievementsUnlocked > 0) {\n  achievementMessage = '🏆 You have unlocked ' + data.achievementsUnlocked + ' achievements so far!';\n}\n\n// Generate streak message\nlet streakMessage = '';\nif (data.currentStreak >= 7) {\n  streakMessage = '🔥 INCREDIBLE! You are on a ' + data.currentStreak + '-day streak! You are unstoppable!';\n} else if (data.currentStreak >= 3) {\n  streakMessage = '⚡ Awesome! You are on a ' + data.currentStreak + '-day streak! Keep it up!';\n} else if (data.currentStreak > 0) {\n  streakMessage = '💪 Great start! You are on a ' + data.currentStreak + '-day streak!';\n}\n\n// Build email body using string concatenation to avoid apostrophe issues\nconst emailBody = '<!DOCTYPE html>' +\n'<html>' +\n'<head>' +\n'  <meta charset=\"UTF-8\">' +\n'  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">' +\n'  <style>' +\n'    body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }' +\n'    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; border-radius: 10px 10px 0 0; text-align: center; }' +\n'    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }' +\n'    .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }' +\n'    .content { background: #ffffff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }' +\n'    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 30px 0; }' +\n'    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }' +\n'    .stat-value { font-size: 36px; font-weight: bold; display: block; margin-bottom: 5px; }' +\n'    .stat-label { font-size: 14px; opacity: 0.9; }' +\n'    .progress-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }' +\n'    .progress-bar-container { width: 100%; height: 30px; background: #e0e0e0; border-radius: 15px; overflow: hidden; margin: 15px 0; }' +\n'    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }' +\n'    .section { margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; }' +\n'    .section-title { font-size: 20px; font-weight: bold; color: #667eea; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }' +\n'    .task-list { list-style: none; padding: 0; margin: 0; }' +\n'    .task-item { padding: 12px; margin: 8px 0; background: white; border-left: 4px solid #667eea; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }' +\n'    .highlight-box { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }' +\n'    .highlight-box h3 { margin: 0 0 10px 0; font-size: 24px; }' +\n'    .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #666; font-size: 12px; }' +\n'    @media only screen and (max-width: 600px) { .stats-grid { grid-template-columns: 1fr; } }' +\n'  </style>' +\n'</head>' +\n'<body>' +\n'  <div class=\"header\">' +\n'    <h1>📅 Weekly Progress Report</h1>' +\n'    <p>Hi ' + (data.username || 'User') + '! Here is your Week ' + (data.currentWeek || 'N/A') + ' summary</p>' +\n'  </div>' +\n'  <div class=\"content\">' +\n(streakMessage ? '    <div class=\"highlight-box\"><h3>' + streakMessage + '</h3></div>' : '') +\n'    <div class=\"stats-grid\">' +\n'      <div class=\"stat-card\">' +\n'        <span class=\"stat-value\">' + (data.currentWeek || 'N/A') + '</span>' +\n'        <span class=\"stat-label\">Week Number</span>' +\n'      </div>' +\n'      <div class=\"stat-card\">' +\n'        <span class=\"stat-value\">' + (data.progressPercentage || 0) + '%</span>' +\n'        <span class=\"stat-label\">Year Progress</span>' +\n'      </div>' +\n'      <div class=\"stat-card\">' +\n'        <span class=\"stat-value\">' + (data.currentStreak || 0) + '</span>' +\n'        <span class=\"stat-label\">Day Streak</span>' +\n'      </div>' +\n'      <div class=\"stat-card\">' +\n'        <span class=\"stat-value\">' + (data.completedTasksThisWeek || 0) + '</span>' +\n'        <span class=\"stat-label\">Tasks This Week</span>' +\n'      </div>' +\n'    </div>' +\n'    <div class=\"progress-section\">' +\n'      <h3 style=\"margin-top: 0;\">Weekly Goal Progress</h3>' +\n'      <div class=\"progress-bar-container\">' +\n'        <div class=\"progress-bar-fill\" style=\"width: ' + Math.min(weeklyGoalProgress, 100) + '%;\">' +\n'          ' + weeklyGoalProgress + '%' +\n'        </div>' +\n'      </div>' +\n'      <p style=\"text-align: center; margin: 10px 0 0 0;\">' +\n'        ' + (data.tasksCompletedThisWeek || 0) + ' of ' + (data.weeklyGoal || 7) + ' tasks completed' +\n'      </p>' +\n'    </div>' +\n'    <div class=\"section\">' +\n'      <div class=\"section-title\">📊 Task Statistics</div>' +\n'      <ul class=\"task-list\">' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Total Tasks:</strong> ' + (data.totalTasks || 0) + '</span>' +\n'          <span>' + completionRate + '% completed</span>' +\n'        </li>' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Completed:</strong> ' + (data.completedTasks || 0) + '</span>' +\n'          <span style=\"color: #4caf50;\">✓</span>' +\n'        </li>' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Pending:</strong> ' + (data.pendingTasks || 0) + '</span>' +\n'          <span style=\"color: #ff9800;\">⏳</span>' +\n'        </li>' +\n'        <li class=\"task-item\">' +\n'          <span><strong>High Priority:</strong> ' + (data.highPriorityTasks || 0) + '</span>' +\n'          <span style=\"color: #f44336;\">⚠️</span>' +\n'        </li>' +\n'      </ul>' +\n'    </div>' +\n((data.totalInterviews || 0) > 0 ? '    <div class=\"section\">' +\n'      <div class=\"section-title\">🎯 Interview Performance</div>' +\n'      <ul class=\"task-list\">' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Total Interviews:</strong> ' + (data.totalInterviews || 0) + '</span>' +\n'          <span>' + (data.interviewsThisWeek || 0) + ' this week</span>' +\n'        </li>' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Average Score:</strong> ' + (data.averageScore || 0) + '%</span>' +\n'          <span>' + (data.recentInterviewScore ? 'Recent: ' + data.recentInterviewScore + '%' : '') + '</span>' +\n'        </li>' +\n'        <li class=\"task-item\">' +\n'          <span><strong>Trend:</strong> ' + improvementMessage + '</span>' +\n'        </li>' +\n'      </ul>' +\n'    </div>' +\n'    ' : '') +\n(achievementMessage ? '    <div class=\"section\">' +\n'      <div class=\"section-title\">🏆 Achievements</div>' +\n'      <p style=\"margin: 0;\">' + achievementMessage + '</p>' +\n'    </div>' +\n'    ' : '') +\n'    <div class=\"section\">' +\n'      <div class=\"section-title\">📅 Week Details</div>' +\n'      <p><strong>Week Period:</strong> ' + (data.weekStart || 'N/A') + ' to ' + (data.weekEnd || 'N/A') + '</p>' +\n'      <p><strong>Report Generated:</strong> ' + (data.currentDate || new Date().toLocaleDateString()) + '</p>' +\n'      <p><strong>Weeks Remaining:</strong> ' + (52 - (data.currentWeek || 0)) + ' weeks left in ' + (data.year || new Date().getFullYear()) + '</p>' +\n'    </div>' +\n'    <div class=\"section\">' +\n'      <div class=\"section-title\">💡 Weekly Motivation</div>' +\n'      <p>Every week is a new opportunity to make progress. You have completed ' + (data.totalTasksCompleted || 0) + ' tasks so far with a ' + (data.currentStreak || 0) + '-day streak! ' + ((data.tasksCompletedThisWeek || 0) < (data.weeklyGoal || 7) ? 'You are close to your weekly goal - keep pushing!' : 'You have reached your weekly goal - amazing work!') + '</p>' +\n((data.teamCount || 0) > 0 ? '      <p>You are part of ' + data.teamCount + ' team(s) - great collaboration! 🤝</p>' : '') +\n'    </div>' +\n'  </div>' +\n'  <div class=\"footer\">' +\n'    <p>This is an automated weekly progress email from your Study App.</p>' +\n'    <p>Generated on ' + (data.currentDate || new Date().toLocaleDateString()) + '</p>' +\n'  </div>' +\n'</body>' +\n'</html>';\n\nreturn {\n  json: {\n    ...data,\n    emailRecipient: data.emailRecipient,\n    emailSubject: data.emailSubject,\n    emailBody: emailBody\n  }\n};"
+      },
+      "id": "generate-email-content",
+      "name": "Generate Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "simple": false,
+        "fromEmail": "={{ $json.senderEmail || $json.emailRecipient }}",
+        "toEmail": "={{ $json.emailRecipient }}",
+        "subject": "={{ $json.emailSubject }}",
+        "emailFormat": "html",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Weekly progress email sent successfully\", \"week\": $json.currentWeek, \"recipient\": $json.emailRecipient } }}",
+        "options": {}
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Set Email Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Email Config": {
+      "main": [
+        [
+          {
+            "node": "Generate Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via Gmail": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}
+

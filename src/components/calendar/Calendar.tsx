@@ -20,8 +20,10 @@ import {
 import { calendarService, type CalendarEvent, type DateSummary } from "../../utils/calendarService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfDay, endOfDay, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfDay, endOfDay, differenceInDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { n8nIntegrationService } from "../../utils/n8nIntegrationService";
+import { Mail } from "lucide-react";
 
 export const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -34,6 +36,8 @@ export const Calendar: React.FC = () => {
   const [dateSummary, setDateSummary] = useState<DateSummary | null>(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [remainingTasksCount, setRemainingTasksCount] = useState<number>(0);
+  const [generatingWeeklySummary, setGeneratingWeeklySummary] = useState(false);
+  const [weeklySummarySent, setWeeklySummarySent] = useState(false);
   const navigate = useNavigate();
 
   const user = realTimeAuth.getCurrentUser();
@@ -101,6 +105,39 @@ export const Calendar: React.FC = () => {
       console.error("Error loading date summary:", error);
     } finally {
       setGeneratingSummary(false);
+    }
+  };
+
+  const handleGenerateWeeklySummary = async () => {
+    if (!user) return;
+    
+    setGeneratingWeeklySummary(true);
+    setWeeklySummarySent(false);
+    
+    try {
+      // Calculate the past week (7 days ending with current date)
+      const endDate = new Date();
+      const startDate = subDays(endDate, 6); // 7 days including today
+      
+      console.log(`Generating weekly summary for week: ${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`);
+      
+      // Send weekly progress email via n8n
+      const success = await n8nIntegrationService.sendWeeklyProgressToN8N(user.id);
+      
+      if (success) {
+        setWeeklySummarySent(true);
+        // Reset the success message after 5 seconds
+        setTimeout(() => {
+          setWeeklySummarySent(false);
+        }, 5000);
+      } else {
+        alert("Failed to send weekly summary. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error generating weekly summary:", error);
+      alert("Error generating weekly summary. Please try again.");
+    } finally {
+      setGeneratingWeeklySummary(false);
     }
   };
 
@@ -216,6 +253,33 @@ export const Calendar: React.FC = () => {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Today
+            </button>
+            <button
+              onClick={handleGenerateWeeklySummary}
+              disabled={generatingWeeklySummary}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+                weeklySummarySent
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              }`}
+              title="Generate and email weekly summary for the past week"
+            >
+              {generatingWeeklySummary ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : weeklySummarySent ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Summary Sent!
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4" />
+                  Generate Weekly Summary
+                </>
+              )}
             </button>
           </div>
         </div>

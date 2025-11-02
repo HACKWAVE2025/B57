@@ -1,0 +1,165 @@
+{
+  "name": "Weekly Progress Email",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get current date and calculate week number\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst daysSinceStart = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24));\nconst weekNumber = Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);\n\n// Get week start and end dates\nconst weekStart = new Date(now);\nweekStart.setDate(now.getDate() - now.getDay());\nweekStart.setHours(0, 0, 0, 0);\n\nconst weekEnd = new Date(weekStart);\nweekEnd.setDate(weekStart.getDate() + 6);\nweekEnd.setHours(23, 59, 59, 999);\n\n// Format dates\nconst formatDate = (date) => {\n  return date.toLocaleDateString('en-US', { \n    weekday: 'long', \n    year: 'numeric', \n    month: 'long', \n    day: 'numeric' \n  });\n};\n\nreturn {\n  json: {\n    currentWeek: weekNumber,\n    weekStart: formatDate(weekStart),\n    weekEnd: formatDate(weekEnd),\n    currentDate: formatDate(now),\n    year: now.getFullYear(),\n    progressPercentage: Math.round((weekNumber / 52) * 100)\n  }\n};"
+      },
+      "id": "calculate-week",
+      "name": "Calculate Week Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "email-subject",
+              "name": "emailSubject",
+              "value": "={{ $json.currentWeek }} Weekly Progress Report - Week of {{ $json.weekStart }}",
+              "type": "string"
+            },
+            {
+              "id": "email-recipient",
+              "name": "emailRecipient",
+              "value": "user@example.com",
+              "type": "string"
+            },
+            {
+              "id": "sender-name",
+              "name": "senderName",
+              "value": "Weekly Progress System",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-email-config",
+      "name": "Set Email Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate detailed email content\nconst weekInfo = $input.item.json;\n\nconst emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      line-height: 1.6;\n      color: #333;\n      max-width: 600px;\n      margin: 0 auto;\n      padding: 20px;\n    }\n    .header {\n      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n      color: white;\n      padding: 30px;\n      border-radius: 10px 10px 0 0;\n      text-align: center;\n    }\n    .content {\n      background: #f9f9f9;\n      padding: 30px;\n      border-radius: 0 0 10px 10px;\n    }\n    .week-card {\n      background: white;\n      padding: 20px;\n      margin: 20px 0;\n      border-radius: 8px;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    .stat-box {\n      display: inline-block;\n      background: #667eea;\n      color: white;\n      padding: 15px 25px;\n      margin: 10px;\n      border-radius: 5px;\n      text-align: center;\n      min-width: 120px;\n    }\n    .stat-value {\n      font-size: 32px;\n      font-weight: bold;\n      display: block;\n    }\n    .stat-label {\n      font-size: 14px;\n      opacity: 0.9;\n    }\n    .progress-bar {\n      width: 100%;\n      height: 30px;\n      background: #e0e0e0;\n      border-radius: 15px;\n      overflow: hidden;\n      margin: 20px 0;\n    }\n    .progress-fill {\n      height: 100%;\n      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      color: white;\n      font-weight: bold;\n      transition: width 0.3s ease;\n    }\n    .section {\n      margin: 30px 0;\n    }\n    .section-title {\n      font-size: 20px;\n      font-weight: bold;\n      color: #667eea;\n      margin-bottom: 15px;\n      border-bottom: 2px solid #667eea;\n      padding-bottom: 10px;\n    }\n    ul {\n      list-style-type: none;\n      padding: 0;\n    }\n    li {\n      padding: 10px;\n      margin: 5px 0;\n      background: white;\n      border-left: 4px solid #667eea;\n      border-radius: 4px;\n    }\n    .footer {\n      text-align: center;\n      margin-top: 30px;\n      padding-top: 20px;\n      border-top: 1px solid #ddd;\n      color: #666;\n      font-size: 12px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📅 Weekly Progress Report</h1>\n    <p>Week ${weekInfo.currentWeek} of ${weekInfo.year}</p>\n  </div>\n  \n  <div class=\"content\">\n    <div class=\"week-card\">\n      <h2>Current Week Information</h2>\n      <div style=\"text-align: center; margin: 20px 0;\">\n        <div class=\"stat-box\">\n          <span class=\"stat-value\">${weekInfo.currentWeek}</span>\n          <span class=\"stat-label\">Week Number</span>\n        </div>\n        <div class=\"stat-box\">\n          <span class=\"stat-value\">${weekInfo.progressPercentage}%</span>\n          <span class=\"stat-label\">Year Progress</span>\n        </div>\n      </div>\n      \n      <div class=\"progress-bar\">\n        <div class=\"progress-fill\" style=\"width: ${weekInfo.progressPercentage}%;\">\n          ${weekInfo.progressPercentage}%\n        </div>\n      </div>\n      \n      <p><strong>Week Period:</strong> ${weekInfo.weekStart} to ${weekInfo.weekEnd}</p>\n      <p><strong>Report Generated:</strong> ${weekInfo.currentDate}</p>\n    </div>\n    \n    <div class=\"section\">\n      <div class=\"section-title\">📊 This Week's Summary</div>\n      <ul>\n        <li>✅ Week ${weekInfo.currentWeek} has started successfully</li>\n        <li>📈 You are ${weekInfo.progressPercentage}% through ${weekInfo.year}</li>\n        <li>🎯 ${52 - weekInfo.currentWeek} weeks remaining this year</li>\n        <li>💪 Keep up the momentum!</li>\n      </ul>\n    </div>\n    \n    <div class=\"section\">\n      <div class=\"section-title\">🎯 Goals & Reminders</div>\n      <ul>\n        <li>Review your weekly goals and objectives</li>\n        <li>Plan your tasks for the upcoming week</li>\n        <li>Reflect on last week's achievements</li>\n        <li>Update your progress tracking systems</li>\n      </ul>\n    </div>\n    \n    <div class=\"section\">\n      <div class=\"section-title\">💡 Weekly Motivation</div>\n      <p>Every week is a new opportunity to make progress toward your goals. Use this week wisely, focus on what matters most, and celebrate your small wins along the way!</p>\n    </div>\n  </div>\n  \n  <div class=\"footer\">\n    <p>This is an automated weekly progress email.</p>\n    <p>Generated by your Weekly Progress System</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    ...weekInfo,\n    emailBody: emailBody\n  }\n};"
+      },
+      "id": "generate-email-content",
+      "name": "Generate Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.senderName }} <noreply@yourdomain.com>",
+        "toEmail": "={{ $json.emailRecipient }}",
+        "subject": "={{ $json.emailSubject }}",
+        "emailType": "html",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Calculate Week Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Week Info": {
+      "main": [
+        [
+          {
+            "node": "Set Email Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Email Config": {
+      "main": [
+        [
+          {
+            "node": "Generate Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}

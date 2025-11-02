@@ -16,6 +16,7 @@ import {
 import { db } from '../config/firebase';
 import { Task } from '../types';
 import { firestoreUserTasks } from './firestoreUserTasks';
+import { calendarService } from './calendarService';
 
 export interface TeamProject {
   id: string;
@@ -347,6 +348,9 @@ class ProjectService {
       metadata: { taskTitle: taskData.title }
     });
 
+    // Automatically sync with calendar
+    await calendarService.syncTodosToCalendar(userId);
+
     return projectTask;
   }
 
@@ -394,6 +398,9 @@ class ProjectService {
         metadata: { taskTitle: projectTask.title }
       });
     }
+
+    // Automatically sync with calendar after status change
+    await calendarService.syncTodosToCalendar(userId);
   }
 
   // Get project statistics for dashboard
