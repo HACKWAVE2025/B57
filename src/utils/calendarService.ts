@@ -98,35 +98,91 @@ class CalendarService {
     endDate?: Date
   ): Promise<CalendarEvent[]> {
     const eventsCollection = this.getEventsCollection(userId);
-    let q = query(eventsCollection, orderBy("startDate", "asc"));
+    
+    try {
+      let q = query(eventsCollection, orderBy("startDate", "asc"));
 
-    if (startDate || endDate) {
-      const conditions = [];
-      if (startDate) {
-        conditions.push(where("startDate", ">=", Timestamp.fromDate(startDate)));
+      if (startDate || endDate) {
+        const conditions = [];
+        if (startDate) {
+          conditions.push(where("startDate", ">=", Timestamp.fromDate(startDate)));
+        }
+        if (endDate) {
+          conditions.push(where("startDate", "<=", Timestamp.fromDate(endDate)));
+        }
+        q = query(eventsCollection, ...conditions, orderBy("startDate", "asc"));
       }
-      if (endDate) {
-        conditions.push(where("startDate", "<=", Timestamp.fromDate(endDate)));
+
+      const snapshot = await getDocs(q);
+      const events = snapshot.docs.map((docSnapshot) => {
+        const data = docSnapshot.data();
+        return {
+          ...data,
+          id: docSnapshot.id,
+          startDate: data.startDate?.toDate() || new Date(),
+          endDate: data.endDate?.toDate(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          reminders: data.reminders?.map((r: any) => ({
+            ...r,
+            time: r.time?.toDate() || new Date(),
+          })),
+        } as CalendarEvent;
+      });
+
+      // If we had date filters, apply them in memory as well
+      if (startDate || endDate) {
+        return events.filter((event) => {
+          if (startDate && event.startDate < startDate) return false;
+          if (endDate && event.startDate > endDate) return false;
+          return true;
+        });
       }
-      q = query(eventsCollection, ...conditions, orderBy("startDate", "asc"));
+
+      return events;
+    } catch (error: any) {
+      // Fallback if index is missing: query without orderBy and sort in memory
+      if (
+        error.code === "failed-precondition" ||
+        error.message?.includes("index")
+      ) {
+        console.warn("Firestore index missing for calendar events, using fallback query.");
+
+        const conditions = [];
+        if (startDate) {
+          conditions.push(where("startDate", ">=", Timestamp.fromDate(startDate)));
+        }
+        if (endDate) {
+          conditions.push(where("startDate", "<=", Timestamp.fromDate(endDate)));
+        }
+
+        let q = conditions.length > 0 
+          ? query(eventsCollection, ...conditions)
+          : query(eventsCollection);
+
+        const snapshot = await getDocs(q);
+        const events = snapshot.docs.map((docSnapshot) => {
+          const data = docSnapshot.data();
+          return {
+            ...data,
+            id: docSnapshot.id,
+            startDate: data.startDate?.toDate() || new Date(),
+            endDate: data.endDate?.toDate(),
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            reminders: data.reminders?.map((r: any) => ({
+              ...r,
+              time: r.time?.toDate() || new Date(),
+            })),
+          } as CalendarEvent;
+        });
+
+        // Sort in memory
+        return events.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      }
+
+      throw error;
     }
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((docSnapshot) => {
-      const data = docSnapshot.data();
-      return {
-        ...data,
-        id: docSnapshot.id,
-        startDate: data.startDate?.toDate() || new Date(),
-        endDate: data.endDate?.toDate(),
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        reminders: data.reminders?.map((r: any) => ({
-          ...r,
-          time: r.time?.toDate() || new Date(),
-        })),
-      } as CalendarEvent;
-    });
   }
 
   async updateEvent(
@@ -163,14 +219,18 @@ class CalendarService {
           (e) => e.type === "todo" && e.relatedId === task.id
         );
 
+        // Parse the dueDate and set it to start of day in local timezone
+        const dueDate = new Date(task.dueDate);
+        const startDate = startOfDay(dueDate);
+
         const eventData: Omit<CalendarEvent, "id" | "userId" | "createdAt" | "updatedAt"> = {
           title: task.title,
           description: task.description || `Subject: ${task.subject}`,
-          startDate: new Date(task.dueDate),
+          startDate: startDate,
           type: "todo",
           relatedId: task.id,
           color: task.priority === "high" ? "#ef4444" : task.priority === "medium" ? "#f59e0b" : "#10b981",
-          allDay: false,
+          allDay: true,
         };
 
         if (existingEvent) {

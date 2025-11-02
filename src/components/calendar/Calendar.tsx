@@ -16,6 +16,7 @@ import {
   Sparkles,
   X,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { calendarService, type CalendarEvent, type DateSummary } from "../../utils/calendarService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
@@ -23,7 +24,6 @@ import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfDay, endOfDay, differenceInDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { n8nIntegrationService } from "../../utils/n8nIntegrationService";
-import { Mail } from "lucide-react";
 
 export const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -38,6 +38,8 @@ export const Calendar: React.FC = () => {
   const [remainingTasksCount, setRemainingTasksCount] = useState<number>(0);
   const [generatingWeeklySummary, setGeneratingWeeklySummary] = useState(false);
   const [weeklySummarySent, setWeeklySummarySent] = useState(false);
+  const [showAddTodoModal, setShowAddTodoModal] = useState(false);
+  const [todoForm, setTodoForm] = useState({ title: "", description: "", subject: "", priority: "medium" as "low" | "medium" | "high" });
   const navigate = useNavigate();
 
   const user = realTimeAuth.getCurrentUser();
@@ -163,6 +165,43 @@ export const Calendar: React.FC = () => {
         break;
       default:
         break;
+    }
+  };
+
+  const handleAddTodo = async () => {
+    if (!user || !selectedDate) return;
+    
+    if (!todoForm.title.trim()) {
+      alert("Title is required.");
+      return;
+    }
+
+    const dueDate = format(selectedDate, "yyyy-MM-dd");
+
+    const newTask = {
+      title: todoForm.title.trim(),
+      description: todoForm.description.trim(),
+      subject: todoForm.subject.trim(),
+      dueDate: dueDate,
+      priority: todoForm.priority,
+      status: "pending" as "pending" | "completed",
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await firestoreUserTasks.addTask(user.id, newTask);
+      setTodoForm({ title: "", description: "", subject: "", priority: "medium" });
+      setShowAddTodoModal(false);
+      
+      // Refresh events and reload data
+      await loadEvents();
+      await loadRemainingTasksCount(selectedDate);
+      
+      // Show success message
+      alert("Todo added successfully!");
+    } catch (error) {
+      console.error("Error adding todo:", error);
+      alert("Failed to add todo. Please try again.");
     }
   };
 
@@ -526,6 +565,17 @@ export const Calendar: React.FC = () => {
                 )}
               </div>
 
+              {/* Add Todo Button */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowAddTodoModal(true)}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Todo for This Date
+                </button>
+              </div>
+
               {/* Events Section */}
               <div>
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
@@ -584,6 +634,105 @@ export const Calendar: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Todo Modal */}
+      {showAddTodoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-lg w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Add Todo for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddTodoModal(false);
+                    setTodoForm({ title: "", description: "", subject: "", priority: "medium" });
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={todoForm.title}
+                  onChange={(e) => setTodoForm({ ...todoForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter todo title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={todoForm.description}
+                  onChange={(e) => setTodoForm({ ...todoForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={todoForm.subject}
+                  onChange={(e) => setTodoForm({ ...todoForm, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Math, Project, etc."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Priority
+                </label>
+                <select
+                  value={todoForm.priority}
+                  onChange={(e) => setTodoForm({ ...todoForm, priority: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-slate-700">
+              <button
+                onClick={() => {
+                  setShowAddTodoModal(false);
+                  setTodoForm({ title: "", description: "", subject: "", priority: "medium" });
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddTodo}
+                disabled={!todoForm.title.trim()}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Todo
+              </button>
             </div>
           </div>
         </div>

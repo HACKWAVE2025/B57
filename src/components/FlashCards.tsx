@@ -321,29 +321,47 @@ export const FlashCards: React.FC = () => {
 
   const getDocumentContent = async (documentId: string): Promise<string> => {
     const file = availableDocuments.find((doc) => doc.id === documentId);
-    if (!file) return "";
+    if (!file) {
+      console.error("File not found in available documents:", documentId);
+      return "";
+    }
+
+    console.log("Extracting content from file:", file.name, file.mimeType);
 
     try {
       if (typeof file.content === "string" && file.content.length > 0) {
+        console.log("Found file content, length:", file.content.length);
         const mime = file.mimeType || "";
         if (
           mime.startsWith("image/") ||
           file.content.startsWith("data:image")
         ) {
+          console.log("Processing image with OCR...");
           const ocr = await unifiedAIService.extractTextFromImage(file.content);
-          return ocr.success && ocr.data ? ocr.data : "";
+          if (ocr.success && ocr.data) {
+            console.log("OCR successful, extracted text length:", ocr.data.length);
+            return ocr.data;
+          } else {
+            console.error("OCR failed:", ocr.error);
+            return "";
+          }
         }
         if (
           mime.includes("pdf") ||
           (file.name && file.name.toLowerCase().endsWith(".pdf"))
         ) {
+          console.log("Processing PDF...");
           if (file.content.startsWith("data:")) {
             try {
-              return await extractTextFromPdfDataUrl(file.content);
-            } catch {
+              const text = await extractTextFromPdfDataUrl(file.content);
+              console.log("PDF extraction successful, text length:", text.length);
+              return text;
+            } catch (error) {
+              console.error("PDF extraction failed:", error);
               return "";
             }
           }
+          console.error("PDF content doesn't start with data:");
           return "";
         }
 
@@ -352,17 +370,25 @@ export const FlashCards: React.FC = () => {
           mime.startsWith("text/") ||
           (file.name && file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
         ) {
-          return decodeTextFromDataUrl(file.content);
+          console.log("Processing text file...");
+          const text = decodeTextFromDataUrl(file.content);
+          console.log("Text decoded, length:", text.length);
+          return text;
         }
 
-        return decodeTextFromDataUrl(file.content);
+        console.log("Unknown file type, attempting to decode as text...");
+        const text = decodeTextFromDataUrl(file.content);
+        console.log("Decoded text length:", text.length);
+        return text;
       }
 
       if (file.driveFileId) {
+        console.log("Downloading content from Google Drive...");
         const downloaded = await driveStorageUtils.downloadFileContent(
           file.driveFileId
         );
         if (typeof downloaded === "string" && downloaded.length > 0) {
+          console.log("Downloaded content, length:", downloaded.length);
           const mime = file.mimeType || "";
           if (
             mime.includes("pdf") ||
@@ -370,11 +396,15 @@ export const FlashCards: React.FC = () => {
           ) {
             if (downloaded.startsWith("data:")) {
               try {
-                return await extractTextFromPdfDataUrl(downloaded);
-              } catch {
+                const text = await extractTextFromPdfDataUrl(downloaded);
+                console.log("PDF extraction from Drive successful, text length:", text.length);
+                return text;
+              } catch (error) {
+                console.error("PDF extraction from Drive failed:", error);
                 return "";
               }
             }
+            console.error("PDF content from Drive doesn't start with data:");
             return "";
           }
           if (
@@ -382,7 +412,13 @@ export const FlashCards: React.FC = () => {
             downloaded.startsWith("data:image")
           ) {
             const ocr = await unifiedAIService.extractTextFromImage(downloaded);
-            return ocr.success && ocr.data ? ocr.data : "";
+            if (ocr.success && ocr.data) {
+              console.log("OCR from Drive successful, text length:", ocr.data.length);
+              return ocr.data;
+            } else {
+              console.error("OCR from Drive failed:", ocr.error);
+              return "";
+            }
           }
           if (
             mime === "text/plain" ||
@@ -390,14 +426,24 @@ export const FlashCards: React.FC = () => {
             (file.name &&
               file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
           ) {
-            return decodeTextFromDataUrl(downloaded);
+            const text = decodeTextFromDataUrl(downloaded);
+            console.log("Text decoded from Drive, length:", text.length);
+            return text;
           }
-          return decodeTextFromDataUrl(downloaded);
+          const text = decodeTextFromDataUrl(downloaded);
+          console.log("Decoded text from Drive, length:", text.length);
+          return text;
+        } else {
+          console.error("Failed to download content from Drive or content is empty");
         }
+      } else {
+        console.error("File has no content and no driveFileId");
       }
 
+      console.error("No content extracted from file");
       return "";
     } catch (e) {
+      console.error("Error extracting content:", e);
       return "";
     }
   };
@@ -529,7 +575,9 @@ export const FlashCards: React.FC = () => {
     if (isLoading) return;
     let content = inputText;
     if (selectedDocument) {
+      console.log("Extracting content from selected document:", selectedDocument);
       content = await getDocumentContent(selectedDocument);
+      console.log("Content extracted, length:", content.length);
       if (!content) {
         alert(
           "Could not extract text from the selected document. Please try with a text file or paste the content manually."
@@ -543,16 +591,21 @@ export const FlashCards: React.FC = () => {
       return;
     }
 
+    console.log("Generating flashcards with content length:", content.length);
     setIsLoading(true);
     try {
       const result = await unifiedAIService.generateFlashcards(content);
+      console.log("AI result:", result.success, result.error);
       if (result.success && result.data) {
+        console.log("AI returned data, length:", result.data.length);
         // Parse user tags from input
         const userTags = inputTags
           .split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0);
+        console.log("Parsing flashcards with user tags:", userTags);
         const newCards = parseFlashcards(result.data, userTags);
+        console.log("Parsed flashcards:", newCards.length);
         const updatedCards = [...cards, ...newCards];
         setCards(updatedCards);
 
@@ -582,10 +635,12 @@ export const FlashCards: React.FC = () => {
           `Successfully generated ${newCards.length} flashcards with enhanced tagging!`
         );
       } else {
+        console.error("AI processing failed:", result.error);
         alert("AI processing failed: " + (result.error || "Unknown error"));
       }
     } catch (e) {
-      alert("An error occurred while generating flashcards.");
+      console.error("Exception during flashcard generation:", e);
+      alert("An error occurred while generating flashcards: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setIsLoading(false);
     }
